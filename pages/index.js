@@ -1,119 +1,149 @@
 import Head from "next/head";
-import { useState } from "react";
+import React, { useEffect, useState } from 'react';
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import Output from "@/components/Output";
 import Input from "@/components/Input";
-import Footer from "@/components/Footer";
+import LoginForm from "@/components/LoginForm";
+
+import { useAuth } from "@/contexts/auth"
+const baseUrl = process.env.NEXT_PUBLIC_URL
 
 
 export default function Home() {
+  const { user, login, token } = useAuth() 
+
+  // //     const [addCookies, setAddCookies] = useState([]);
+
   const [addCookies, setAddCookies] = useState([]);
 
-  const submitHandler = (event) => {
-    event.preventDefault();
+  async function gitcook() {
+    if (token) {
+    const protectedUrl = `${baseUrl}/api/v1/cokie_stand/`;
+    const protectedOptions = {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token.access}` // Include the access token in the Authorization header
+      }
+    };
+    // Make the GET request to the protected route
+    const protectedResponse = await fetch(protectedUrl, protectedOptions);
+    // Check the response status
+    if (protectedResponse.status === 200) {
+      const protectedData = await protectedResponse.json();
+      protectedData.forEach((value) => {
+        console.log(value); // This will log the current value
+        // Update the state using the previous state
+        setAddCookies((prevaddCookies) => [...prevaddCookies, value]);
+      });
+      console.log("Protected Data:", protectedData);
+    } else {
+      console.log("Failed to access protected route.");
+    }
+  }}
+  async function postDataToProtectedRoute( postData) {
+    if (token) {
+      // Construct the URL for the protected route you want to access
+      const protectedUrl =  `${baseUrl}/api/v1/cokie_stand/`;
+      // Set up options for the POST request to the protected route
+      const protectedOptions = {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token.access}`, // Include the access token in the Authorization header
+          "Content-Type": "application/json" // Specify content type as JSON
+        },
+        body: JSON.stringify(postData) // Convert the data to JSON and set it as the request body
+      };
+      try {
+        // Make the POST request to the protected route
+        const protectedResponse = await fetch(protectedUrl, protectedOptions);
+        // Check the response status
+        if (protectedResponse.status === 201) {
+          const responseData = await protectedResponse.json();
+          setAddCookies([...addCookies, responseData]);
+        } else {
+          throw new Error("Failed to post data.");
+        }
+      } catch (error) {
+        throw new Error(`Error: ${error.message}`);
+      }
+    } else {
+      throw new Error("Token is missing.");
+    }
+  }
 
-    const cookies = {
-      id: addCookies.length + 1,
+  async function deletData( idPost) {
+    if (token) {
+      const protectedUrl =  `${baseUrl}/api/v1/cokie_stand/${idPost}`;
+      const protectedOptions = {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token.access}`, 
+        },
+      };
+      try {
+        const protectedResponse = await fetch(protectedUrl, protectedOptions);
+        // Check the response status
+        console.log(protectedResponse.status )
+
+        if (protectedResponse.status === 204) {
+          setAddCookies([])
+          gitcook()
+        } else {
+          throw new Error("Failed to post data.");
+        }
+      } catch (error) {
+        throw new Error(`Error: ${error.message}`);
+      }
+    } else {
+      throw new Error("Token is missing.");
+    }
+  }
+
+  
+  function loginformhundeler(event) {
+    event.preventDefault();
+    const username = event.target.username.value
+    const password = event.target.password.value
+    login(username, password)
+  }
+  const addCookieStand = (event) => {
+    event.preventDefault();
+    const newCookieStand = {
+      id: addCookies.length + 1, 
       location: event.target.location.value,
-      minCustomersPerHour: parseInt(event.target.minCustomersPerHour.value),
-      maxCustomersPerHour: parseInt(event.target.maxCustomersPerHour.value),
-      avgCookiesPerSale: parseFloat(event.target.avgCookiesPerSale.value),
+      minimum_customers_per_hour: parseInt(event.target.minCustomersPerHour.value),
+      maximum_customers_per_hour: parseInt(event.target.maxCustomersPerHour.value),
+      average_cookies_per_sale: parseFloat(event.target.avgCookiesPerSale.value),
     };
 
-    setAddCookies([...addCookies, cookies]);
+    postDataToProtectedRoute( newCookieStand)
     event.target.reset();
   };
-
+  useEffect(() => {
+    gitcook(); // Call the function whenever the route is accessed
+  }, [token]); 
   return (
     <>
       <Head>
         <title>Cookie Stand Admin</title>
       </Head>
-
       <div className="flex flex-col min-h-screen">
-        {/* class="flex flex-col p-2 space-y-2 bg-green-100 text-center max-w-[200vh]" */}
         <Header />
-        <main className="flex flex-col items-center flex-grow py-40 space-y-8 bg-green-200 p-4">
-          <Input handeler={submitHandler} />
-          <Output handeler={addCookies.length} handeler2={addCookies} />
+        <main className="flex flex-col items-center flex-grow py-4 space-y-8">
+          {!user ? (
+            <LoginForm loginformhundeler={loginformhundeler} />
+          ) : (
+            <>
+              <Input handeler={addCookieStand} />
+              <Output addCookies={addCookies} deletData={deletData} />
+            </>
+          )}
         </main>
-       <Footer/>
       </div>
+      <Footer addCookies={addCookies} />
+
     </>
   );
 }
 
-// function Header() {
-//   return (
-//     <header className="flex justify-center items-center p-5 bg-green-600 text-black-50">
-//       <div className="text-center">
-//         <h1 className="text-5xl font-medium">Cookie Stand Admin</h1>
-//       </div>
-//     </header>
-//   );
-// }
-
-// function Form(props) {
-//   return (
-//     <form className="w-1/2 p-10 mx-auto my-4 bg-green-600" onSubmit={props.handler}>
-//       <div className="text-center">
-//       <h1 className="text-3xl font-bold mb-5">Create Cookie Stand</h1>
-//       </div>
-//       <div className="flex flex-col mb-4">
-//         <label htmlFor="location" className="text-xl mb-12 font-bold">
-//           Location:
-//         </label>
-//         <input
-//           type="text"
-//           id="location"
-//           name="input0" 
-//           className="p-2 border"
-//           placeholder="Enter the location"
-//         />
-//       </div>
-//       <div className="flex justify-around mb-14">
-//         <div className="flex flex-col mr-14">
-//           <label htmlFor="Minimum" className="text-xl">
-//             Minimum Customers<br />per hour
-//           </label>
-//           <input
-//             type="number"
-//             id="Minimum"
-//             name="input1" 
-//             className="p-2 border w-10/12"
-//           />
-//         </div>
-//         <div className="flex flex-col mr-4">
-//           <label htmlFor="Maximum" className="text-xl">
-//             Maximum Customers<br />per hour
-//           </label>
-//           <input
-//             type="number"
-//             id="Maximum"
-//             name="input2" 
-//             className="p-2 border w-10/12"
-//           />
-//         </div>
-//         <div className="flex flex-col">
-//           <label htmlFor="Average" className="text-xl">
-//             Average Cookies per<br />Sale
-//           </label>
-//           <input
-//             type="number"
-//             id="Average"
-//             name="input3" 
-//             className="p-2 border w-10/12"
-//           />
-//         </div>
-//       </div>
-//       <div className="flex justify-center"> 
-//         <button
-//           type="submit"
-//           className="px-8 py-2 bg-green-900 text-white rounded hover:bg-green-600"
-//         >
-//           Create
-//         </button>
-//       </div>
-//     </form>
-//   );
-// }
