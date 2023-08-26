@@ -10,8 +10,9 @@ const Overview = () => {
              Welcome to the Overview page! This page provides a summary of the key features .
         </div>
         </>
-
     );
+        // <Footer/>
+
 }
 
 export default Overview;
