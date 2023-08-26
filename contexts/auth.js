@@ -7,6 +7,10 @@ const AuthContext = createContext()
 
 export function useAuth() {
     const auth = useContext(AuthContext)
+    if (!auth){
+        return("Error : Empty Auth ")
+
+    }
     return auth;
 }
 
